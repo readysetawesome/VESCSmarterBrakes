@@ -17,12 +17,13 @@ VESCSmarterBrakes::VESCSmarterBrakes(int dimmerPin, int buttonPin) {
   UART.setSerialPort(&Serial);
   _mode = MODE_STROBE;
   _lightOff = false;
-  _idleMode = false;
+  _idling = false;
   _brakeActive = false;
   _buttonUnpressed = true;
   _startupSplashRate = 1;
   _startupSplashDelay = 2;
   _lastDebounceTime = 0;
+  _currentPower = MEDIUM_POWER;
 }
 
 void VESCSmarterBrakes::TurnOn() {
@@ -30,11 +31,11 @@ void VESCSmarterBrakes::TurnOn() {
   
   // pulse animation on startup
   TransitionBrightness(HIGH_POWER, OFF);
-  TransitionBrightness(OFF, LOW_POWER);
-  TransitionBrightness(LOW_POWER, OFF);
-  TransitionBrightness(OFF, LOW_POWER);
-  TransitionBrightness(LOW_POWER, IDLE_POWER); 
-  TransitionBrightness(IDLE_POWER, RUN_POWER);   
+  TransitionBrightness(OFF, MEDIUM_POWER);
+  TransitionBrightness(MEDIUM_POWER, OFF);
+  TransitionBrightness(OFF, MEDIUM_POWER);
+  TransitionBrightness(MEDIUM_POWER, IDLE_POWER);
+  TransitionBrightness(IDLE_POWER, LOW_POWER);
 }
 
 void VESCSmarterBrakes::TransitionBrightness(int dStart, int dStop) {
@@ -76,11 +77,16 @@ void VESCSmarterBrakes::ReadMode() {
 
 void VESCSmarterBrakes::ChangeMode() {
   if (_mode == MODE_STROBE && !_brakeActive) {
-    SetDimmerPower(LOW_POWER);
+    SetDimmerPower(_currentPower);
   }
   _mode++;
   if (_mode > MODE_OFF) {
     _mode = MODE_STROBE;
+  }
+  if (_mode == MODE_LOW) {
+    _currentPower = LOW_POWER;
+  } else {
+    _currentPower = MEDIUM_POWER;
   }
 }
 
@@ -95,7 +101,7 @@ void VESCSmarterBrakes::ApplyStrobe() {
   if (_mode == MODE_STROBE && !_brakeActive) {
     if (_strobeLastCycledOn == NULL || millis() - _strobeLastCycledOn > 400) {
       _strobeLastCycledOn = millis();
-      SetDimmerPower(LOW_POWER);
+      SetDimmerPower(_currentPower);
     } else if (millis() - _strobeLastCycledOn > 200) {
       SetDimmerPower(IDLE_POWER);
     }
@@ -161,22 +167,22 @@ void VESCSmarterBrakes::DoLoop() {
       // honor the debounce by first making sure subsequent event didn't reactivate brake
       if (!_brakeActive) {
         // More than debounce ms have passed since ANY braking event, return to run power
-        SetDimmerPower(RUN_POWER);
+        SetDimmerPower(LOW_POWER);
       }
     }
     if (_idleSince == NULL) {
-      if (_idleMode) {
-        _idleMode = false;
-        SetDimmerPower(RUN_POWER);
+      if (_idling) {
+        _idling = false;
+        SetDimmerPower(LOW_POWER);
       }
-    } else if (!_idleMode && ((_loopStartMillis - _idleSince) > BRAKE_IDLE_CHILL_TIMER)) {
-      _idleMode = true;
+    } else if (!_idling && (_mode == MODE_LOW || _mode == MODE_STEADY) && ((_loopStartMillis - _idleSince) > BRAKE_IDLE_CHILL_TIMER)) {
+      _idling = true;
       SetDimmerPower(IDLE_POWER);
     }
     if (systemVoltage != NULL) {
       if (systemVoltage < 22.5) {
         if (!_lightOff) {
-          TransitionBrightness(RUN_POWER, OFF);
+          TransitionBrightness(LOW_POWER, OFF);
           _lightOff= true;
         }
       } else if (_lightOff) {

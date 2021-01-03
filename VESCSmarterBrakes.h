@@ -6,8 +6,8 @@
 
 #define OFF 255
 #define IDLE_POWER 195
-#define RUN_POWER 115
-#define LOW_POWER 80
+#define LOW_POWER 115
+#define MEDIUM_POWER 80
 #define HIGH_POWER 0
 #define BRAKE_RELEASE_DEBOUNCE 225
 #define BRAKE_IDLE_CHILL_TIMER 30000
@@ -40,6 +40,7 @@ class VESCSmarterBrakes
 		int _currentPower;
 		int _lastButtonValue;
 		int _buttonValue;
+		int _runPower;
 		uint32_t _strobeLastCycledOn;
 		uint32_t _loopsInTarget;
 		uint32_t _idleSince;
@@ -47,7 +48,7 @@ class VESCSmarterBrakes
 		uint32_t _lastDebounceTime;
 		VescUart UART;
 		bool _lightOff;
-		bool _idleMode;
+		bool _idling;
 		bool _brakeActive;
 		bool _buttonUnpressed;
 };
