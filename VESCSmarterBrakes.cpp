@@ -5,8 +5,8 @@
 
 
 VESCSmarterBrakes::VESCSmarterBrakes(int dimmerPin, int buttonPin) {
-	pinMode(buttonPin, INPUT_PULLUP);
 	pinMode(dimmerPin, OUTPUT);
+	pinMode(buttonPin, INPUT_PULLUP);
 	_dimmerPin = dimmerPin;
 	_buttonPin = buttonPin;
 	SetDimmerPower(IDLE_POWER);
@@ -15,14 +15,14 @@ VESCSmarterBrakes::VESCSmarterBrakes(int dimmerPin, int buttonPin) {
 
   /** Define which ports to use as UART */
   UART.setSerialPort(&Serial);
+	_mode = MODE_STROBE;
 	_lightOff = false;
 	_idleMode = false;
 	_brakeActive = false;
 	_buttonUnpressed = true;
-	_startupSplashRate = 4;
-	_startupSplashDelay = 8;
-	
-  TurnOn();
+	_startupSplashRate = 1;
+	_startupSplashDelay = 2;
+	_lastDebounceTime = 0;
 }
 
 void VESCSmarterBrakes::TurnOn() {
@@ -59,28 +59,33 @@ void VESCSmarterBrakes::TransitionBrightness(int dStart, int dStop) {
 
 void VESCSmarterBrakes::ReadMode() {
 	int sensorValue = digitalRead(_buttonPin);
-	if (_buttonUnpressed && sensorValue == BUTTON_PRESSED && _lastButtonValue == BUTTON_PRESSED) {
-		// button pushed, debounce by looking for 2 in a row
-		_buttonUnpressed = false;
+	if (sensorValue != _lastButtonValue) {
+		_lastDebounceTime = millis();
 	}
-	if (sensorValue == BUTTON_OFF && _lastButtonValue == BUTTON_PRESSED) {
-		_buttonUnpressed = true;
-		ChangeMode();
+	if (millis() - _lastDebounceTime > 50) {
+		if (sensorValue != _buttonValue) {
+			_buttonValue = sensorValue;
+			if (_buttonValue == LOW) {
+				ChangeMode();
+			}
+		}
 	}
 	_lastButtonValue = sensorValue;
 }
 
 
 void VESCSmarterBrakes::ChangeMode() {
-	if (_mode == 3) {
-		_mode == 0;
-	} else {
-		_mode++;
+	if (_mode == MODE_STROBE && !_brakeActive) {
+		SetDimmerPower(LOW_POWER);
+	}
+	_mode++;
+	if (_mode > MODE_OFF) {
+		_mode = MODE_STROBE;
 	}
 }
 
 void VESCSmarterBrakes::SetDimmerPower(int value) {
-	if (_currentPower != value) {
+	if (_currentPower == NULL || _currentPower != value) {
 		_currentPower = value;
 		analogWrite(_dimmerPin, value);
 	}
@@ -88,36 +93,30 @@ void VESCSmarterBrakes::SetDimmerPower(int value) {
 
 void VESCSmarterBrakes::ApplyStrobe() {
 	if (_mode == MODE_STROBE && !_brakeActive) {
-		if (_strobeLastCycledOn == NULL || _loopStartMillis - _strobeLastCycledOn > 400) {
-			_strobeLastCycledOn = _loopStartMillis;
-			SetDimmerPower(HIGH_POWER);
-		}
-		if (_loopStartMillis - _strobeLastCycledOn > 200) {
+		if (_strobeLastCycledOn == NULL || millis() - _strobeLastCycledOn > 400) {
+			_strobeLastCycledOn = millis();
 			SetDimmerPower(LOW_POWER);
+		} else if (millis() - _strobeLastCycledOn > 200) {
+			SetDimmerPower(IDLE_POWER);
 		}
 	}
 }
 
 void VESCSmarterBrakes::DoLoop() {
-	int delayTime;
+	int commReqDelayTime;
 	float systemVoltage;
 	
   if (_loopStartMillis != NULL) {
-    delayTime = 15-(millis()-_loopStartMillis);
-    if (delayTime > 0) {
-      delay(delayTime);
-    }
+    commReqDelayTime = 15-(millis()-_loopStartMillis);
   }
-  _loopStartMillis = millis();
 	
 	ReadMode();
 	ApplyStrobe();
 
 	if (_mode == MODE_OFF) {
 		SetDimmerPower(OFF);
-		delay(10);
-	} else if (UART.getVescValues()) {
-  
+	} else if (commReqDelayTime <= 0 && UART.getVescValues()) {
+		_loopStartMillis = millis();
     systemVoltage = UART.data.inpVoltage;
 
     int32_t RPM;
@@ -126,7 +125,7 @@ void VESCSmarterBrakes::DoLoop() {
     RPM = UART.data.rpm;
     I = UART.data.avgMotorCurrent;
 
-    if (I < -12 &&  RPM > 100 ) {
+    if (I < -12 && RPM > 100 ) {
       // This looks like brakes. wait for 4 consecutive confirmations within the target ranges
       _loopsInTarget++;
       _idleSince = NULL;
@@ -137,7 +136,6 @@ void VESCSmarterBrakes::DoLoop() {
         SetDimmerPower(HIGH_POWER);
         _brakeReleasingFrom = NULL;
       }
-    
     } else {
       // Not in braking ranges, reset the counter
       _loopsInTarget = 0;

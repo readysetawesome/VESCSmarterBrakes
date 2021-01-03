@@ -23,26 +23,28 @@ class VESCSmarterBrakes
 {
   public:
     VESCSmarterBrakes(int dimmerPin, int buttonPin);
+		void TurnOn();
 		void DoLoop();
   private:
 		void ReadMode();
 		void ApplyStrobe();
 		void SetDimmerPower(int value);
 		void ChangeMode();
-		void TurnOn();
 		void TransitionBrightness(int dStart, int dStop);
     int _dimmerPin;
     int _buttonPin;
 		int _startupSplashRate;
-		int _startupSplashDelay;
-		int _loopStartMillis;
+		unsigned long _startupSplashDelay;
+		uint32_t _loopStartMillis;
 		int _mode;
 		int _currentPower;
 		int _lastButtonValue;
-		int _strobeLastCycledOn;
+		int _buttonValue;
+		uint32_t _strobeLastCycledOn;
 		uint32_t _loopsInTarget;
 		uint32_t _idleSince;
 		uint32_t _brakeReleasingFrom;
+		uint32_t _lastDebounceTime;
 		VescUart UART;
 		bool _lightOff;
 		bool _idleMode;
