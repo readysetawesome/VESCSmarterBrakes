@@ -5,24 +5,24 @@
 
 
 VESCSmarterBrakes::VESCSmarterBrakes(int dimmerPin, int buttonPin) {
-	pinMode(dimmerPin, OUTPUT);
-	pinMode(buttonPin, INPUT_PULLUP);
-	_dimmerPin = dimmerPin;
-	_buttonPin = buttonPin;
-	SetDimmerPower(IDLE_POWER);
+  pinMode(dimmerPin, OUTPUT);
+  pinMode(buttonPin, INPUT_PULLUP);
+  _dimmerPin = dimmerPin;
+  _buttonPin = buttonPin;
+  SetDimmerPower(IDLE_POWER);
   /** Setup UART port */
   Serial.begin(DEFAULT_COMM_BAUD);
 
   /** Define which ports to use as UART */
   UART.setSerialPort(&Serial);
-	_mode = MODE_STROBE;
-	_lightOff = false;
-	_idleMode = false;
-	_brakeActive = false;
-	_buttonUnpressed = true;
-	_startupSplashRate = 1;
-	_startupSplashDelay = 2;
-	_lastDebounceTime = 0;
+  _mode = MODE_STROBE;
+  _lightOff = false;
+  _idleMode = false;
+  _brakeActive = false;
+  _buttonUnpressed = true;
+  _startupSplashRate = 1;
+  _startupSplashDelay = 2;
+  _lastDebounceTime = 0;
 }
 
 void VESCSmarterBrakes::TurnOn() {
@@ -49,74 +49,74 @@ void VESCSmarterBrakes::TransitionBrightness(int dStart, int dStop) {
   }
   
   for (int i=loopStart; i != loopEnd; i+=factor ) {
-		SetDimmerPower(i*_startupSplashRate);
+    SetDimmerPower(i*_startupSplashRate);
     delay(_startupSplashDelay);
   }
 
-	SetDimmerPower(dStop);
+  SetDimmerPower(dStop);
 }
 
 
 void VESCSmarterBrakes::ReadMode() {
-	int sensorValue = digitalRead(_buttonPin);
-	if (sensorValue != _lastButtonValue) {
-		_lastDebounceTime = millis();
-	}
-	if (millis() - _lastDebounceTime > 50) {
-		if (sensorValue != _buttonValue) {
-			_buttonValue = sensorValue;
-			if (_buttonValue == LOW) {
-				ChangeMode();
-			}
-		}
-	}
-	_lastButtonValue = sensorValue;
+  int sensorValue = digitalRead(_buttonPin);
+  if (sensorValue != _lastButtonValue) {
+    _lastDebounceTime = millis();
+  }
+  if (millis() - _lastDebounceTime > 50) {
+    if (sensorValue != _buttonValue) {
+      _buttonValue = sensorValue;
+      if (_buttonValue == LOW) {
+        ChangeMode();
+      }
+    }
+  }
+  _lastButtonValue = sensorValue;
 }
 
 
 void VESCSmarterBrakes::ChangeMode() {
-	if (_mode == MODE_STROBE && !_brakeActive) {
-		SetDimmerPower(LOW_POWER);
-	}
-	_mode++;
-	if (_mode > MODE_OFF) {
-		_mode = MODE_STROBE;
-	}
+  if (_mode == MODE_STROBE && !_brakeActive) {
+    SetDimmerPower(LOW_POWER);
+  }
+  _mode++;
+  if (_mode > MODE_OFF) {
+    _mode = MODE_STROBE;
+  }
 }
 
 void VESCSmarterBrakes::SetDimmerPower(int value) {
-	if (_currentPower == NULL || _currentPower != value) {
-		_currentPower = value;
-		analogWrite(_dimmerPin, value);
-	}
+  if (_currentPower == NULL || _currentPower != value) {
+    _currentPower = value;
+    analogWrite(_dimmerPin, value);
+  }
 }
 
 void VESCSmarterBrakes::ApplyStrobe() {
-	if (_mode == MODE_STROBE && !_brakeActive) {
-		if (_strobeLastCycledOn == NULL || millis() - _strobeLastCycledOn > 400) {
-			_strobeLastCycledOn = millis();
-			SetDimmerPower(LOW_POWER);
-		} else if (millis() - _strobeLastCycledOn > 200) {
-			SetDimmerPower(IDLE_POWER);
-		}
-	}
+  if (_mode == MODE_STROBE && !_brakeActive) {
+    if (_strobeLastCycledOn == NULL || millis() - _strobeLastCycledOn > 400) {
+      _strobeLastCycledOn = millis();
+      SetDimmerPower(LOW_POWER);
+    } else if (millis() - _strobeLastCycledOn > 200) {
+      SetDimmerPower(IDLE_POWER);
+    }
+  }
 }
 
 void VESCSmarterBrakes::DoLoop() {
-	int commReqDelayTime;
-	float systemVoltage;
-	
+  int commReqDelayTime;
+  float systemVoltage;
+  
   if (_loopStartMillis != NULL) {
     commReqDelayTime = 15-(millis()-_loopStartMillis);
   }
-	
-	ReadMode();
-	ApplyStrobe();
+  
+  ReadMode();
+  ApplyStrobe();
 
-	if (_mode == MODE_OFF) {
-		SetDimmerPower(OFF);
-	} else if (commReqDelayTime <= 0 && UART.getVescValues()) {
-		_loopStartMillis = millis();
+  if (_mode == MODE_OFF) {
+    SetDimmerPower(OFF);
+  } else if (commReqDelayTime <= 0 && UART.getVescValues()) {
+    _loopStartMillis = millis();
     systemVoltage = UART.data.inpVoltage;
 
     int32_t RPM;
@@ -165,24 +165,24 @@ void VESCSmarterBrakes::DoLoop() {
         SetDimmerPower(RUN_POWER);
       }
     }
-	  if (_idleSince == NULL) {
-	    if (_idleMode) {
-	      _idleMode = false;
-	      SetDimmerPower(RUN_POWER);
-	    }
-	  } else if (!_idleMode && ((_loopStartMillis - _idleSince) > BRAKE_IDLE_CHILL_TIMER)) {
-	    _idleMode = true;
-	    SetDimmerPower(IDLE_POWER);
-	  }
-	  if (systemVoltage != NULL) {
-	    if (systemVoltage < 22.5) {
-	      if (!_lightOff) {
-	        TransitionBrightness(RUN_POWER, OFF);
-	        _lightOff= true;
-	      }
-	    } else if (_lightOff) {
-	      TurnOn();
-	    }
-	  }
-	}
+    if (_idleSince == NULL) {
+      if (_idleMode) {
+        _idleMode = false;
+        SetDimmerPower(RUN_POWER);
+      }
+    } else if (!_idleMode && ((_loopStartMillis - _idleSince) > BRAKE_IDLE_CHILL_TIMER)) {
+      _idleMode = true;
+      SetDimmerPower(IDLE_POWER);
+    }
+    if (systemVoltage != NULL) {
+      if (systemVoltage < 22.5) {
+        if (!_lightOff) {
+          TransitionBrightness(RUN_POWER, OFF);
+          _lightOff= true;
+        }
+      } else if (_lightOff) {
+        TurnOn();
+      }
+    }
+  }
 }
