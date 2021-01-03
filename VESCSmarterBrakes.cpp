@@ -132,7 +132,6 @@ void VESCSmarterBrakes::DoLoop() {
     
       if (!_brakeActive && _loopsInTarget > 3) {
         _brakeActive = true;
-        //digitalWrite(13,HIGH);
         SetDimmerPower(HIGH_POWER);
         _brakeReleasingFrom = NULL;
       }
