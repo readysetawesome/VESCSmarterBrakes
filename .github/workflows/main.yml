@@ -15,9 +15,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Compile all examples
+      - name: Compile for pro mini
         uses: arduino/compile-sketches@v1
-        with:
+        with: &defaultBuildOpts
           verbose: true
           libraries: |
             - source-url: https://github.com/SolidGeek/VescUart.git
@@ -28,3 +28,9 @@ jobs:
           sketches-report-path: ${{ env.SKETCHES_REPORTS_PATH }}
           sketch-paths: |
             - UartBrakes
+
+      - name: Compile for itsy bitsy 3v
+        uses: arduino/compile-sketches@v1
+        with:
+          <<: *defaultBuildOpts
+          fqbn: "adafruit:avr:itsybitsy32u4_3V"
