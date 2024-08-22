@@ -13,7 +13,7 @@ jobs:
       SKETCHES_REPORTS_PATH: sketches-reports
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Compile all examples
         uses: arduino/compile-sketches@v1
