@@ -22,7 +22,7 @@ jobs:
           libraries: |
             - source-url: https://github.com/SolidGeek/VescUart.git
           cli-compile-flags: |
-            - --library="${{ github.workspace }}/src/"
+            - --library="${{ github.workspace }}"
           fqbn: "arduino:avr:pro"
           enable-deltas-report: false
           sketches-report-path: ${{ env.SKETCHES_REPORTS_PATH }}
