@@ -6,7 +6,7 @@ on:
     branches:
     - master
 jobs:
-  - name: Compile Arduino Sketches
+  - name: "Compile Arduino Sketches"
     uses: arduino/compile-sketches@v1
     with:
       fqbn: "arduino:avr:pro"
