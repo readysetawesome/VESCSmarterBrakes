@@ -6,7 +6,7 @@ on:
     types: [ 'opened', 'reopened', 'synchronize']
 jobs:
   build:
-    name: compile for pro mini
+    name: Compile For All Supported Boards
     runs-on: ubuntu-latest
 
     env:
