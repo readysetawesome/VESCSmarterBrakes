@@ -18,6 +18,9 @@ jobs:
       - name: Compile all examples
         uses: arduino/compile-sketches@v1
         with:
+          libraries: |
+            - name: Arduino
+            - source-url: git://github.com/SolidGeek/VescUart
           fqbn: "arduino:avr:pro"
           enable-deltas-report: true
           sketches-report-path: ${{ env.SKETCHES_REPORTS_PATH }}
