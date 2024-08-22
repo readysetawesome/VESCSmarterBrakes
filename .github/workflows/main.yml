@@ -6,13 +6,21 @@ on:
     branches:
     - master
 jobs:
-  compile:
-    name: "Compile Arduino Sketches"
-    uses: arduino/compile-sketches/action.yml@v1.1.2
-    with:
-      fqbn: "arduino:avr:pro"
-      sketch-paths: src
-      libraries: |
-        - name: Arduino
-        - name: EEPROM
-        - name: VescUart
+  build:
+    name: compile for pro mini
+    runs-on: ubuntu-latest
+
+    env:
+      SKETCHES_REPORTS_PATH: sketches-reports
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Compile all examples
+        uses: arduino/compile-sketches@v1
+        with:
+          fqbn: "arduino:avr:pro"
+          enable-deltas-report: true
+          sketches-report-path: ${{ env.SKETCHES_REPORTS_PATH }}
+          sketch-paths: |
+            - src
