@@ -3,6 +3,8 @@
 #include "VescUart.h"
 #include "VESCSmarterBrakes.h"
 
+VescUart UART;
+
 VESCSmarterBrakes::VESCSmarterBrakes(int dimmerPin, int buttonPin) {
   pinMode(dimmerPin, OUTPUT);
   pinMode(buttonPin, INPUT_PULLUP);
