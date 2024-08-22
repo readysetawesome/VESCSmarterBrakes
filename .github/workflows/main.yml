@@ -6,12 +6,12 @@ on:
     branches:
     - master
 jobs:
-  - name: "Compile Arduino Sketches"
+  compile:
+    name: "Compile Arduino Sketches"
     uses: arduino/compile-sketches@v1
     with:
       fqbn: "arduino:avr:pro"
-      sketch-paths:
-        - src
+      sketch-paths: src
       libraries: |
         - name: Arduino
         - name: EEPROM
