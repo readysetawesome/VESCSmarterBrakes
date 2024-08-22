@@ -24,7 +24,7 @@ jobs:
           cli-compile-flags: |
             - --library="${{ github.workspace }}/src/"
           fqbn: "arduino:avr:pro"
-          enable-deltas-report: true
+          enable-deltas-report: false
           sketches-report-path: ${{ env.SKETCHES_REPORTS_PATH }}
           sketch-paths: |
             - UartBrakes
