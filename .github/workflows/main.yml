@@ -1,18 +1,30 @@
 on:
   push:
     branches:
-    - master
+    - main
   pull_request:
-    branches:
-    - master
+    types: [ 'opened', 'reopened', 'synchronize']
 jobs:
-  - name: Compile Arduino Sketches
-    uses: arduino/compile-sketches@v1
-    with:
-      fqbn: "arduino:avr:pro"
-      sketch-paths:
-        - src
-      libraries: |
-        - name: Arduino
-        - name: EEPROM
-        - name: VescUart
+  build:
+    name: compile for pro mini
+    runs-on: ubuntu-latest
+
+    env:
+      SKETCHES_REPORTS_PATH: sketches-reports
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compile all examples
+        uses: arduino/compile-sketches@v1
+        with:
+          verbose: true
+          libraries: |
+            - source-url: https://github.com/SolidGeek/VescUart.git
+          cli-compile-flags: |
+            - --library="${{ github.workspace }}/src/"
+          fqbn: "arduino:avr:pro"
+          enable-deltas-report: false
+          sketches-report-path: ${{ env.SKETCHES_REPORTS_PATH }}
+          sketch-paths: |
+            - UartBrakes
