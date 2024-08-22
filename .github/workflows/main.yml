@@ -35,8 +35,8 @@ jobs:
           libraries: |
             - source-url: ${{ env.VESC_LIB_URL }}
           cli-compile-flags: |
-            - --library="${{ github.workspace }}" --additional-urls="https://adafruit.github.io/arduino-board-index/package_adafruit_index.json"
-          fqbn: "adafruit:avr:itsybitsy32u4_3V"
+            - --library="${{ github.workspace }}"
+          fqbn: "adafruit:avr:itsybitsy32u4_3V https://adafruit.github.io/arduino-board-index/package_adafruit_index.json"
           enable-deltas-report: false
           sketches-report-path: ${{ env.SKETCHES_REPORTS_PATH }}
           sketch-paths: |
