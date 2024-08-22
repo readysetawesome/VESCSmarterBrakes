@@ -22,4 +22,4 @@ jobs:
           enable-deltas-report: true
           sketches-report-path: ${{ env.SKETCHES_REPORTS_PATH }}
           sketch-paths: |
-            - brakes
+            - UartBrakes
