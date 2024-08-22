@@ -18,6 +18,7 @@ jobs:
       - name: Compile all examples
         uses: arduino/compile-sketches@v1
         with:
+          verbose: true
           libraries: |
             - source-url: https://github.com/SolidGeek/VescUart.git
           cli-compile-flags: --libraries src
