@@ -1,4 +1,4 @@
-#include <../../VESCSmarterBrakes.h>
+#include <VESCSmarterBrakes.h>
 
 // Pass in dimmer pin, mode switch pin
 VESCSmarterBrakes Brakes(3, 9);
