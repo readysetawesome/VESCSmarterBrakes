@@ -6,21 +6,21 @@ on:
     types: [ 'opened', 'reopened', 'synchronize']
 jobs:
   build:
-    name: compile for pro mini
+    name: Compile For All Supported Boards
     runs-on: ubuntu-latest
 
     env:
       SKETCHES_REPORTS_PATH: sketches-reports
+      VESC_LIB_URL: https://github.com/SolidGeek/VescUart.git
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Compile all examples
+      - name: Compile for pro mini
         uses: arduino/compile-sketches@v1
         with:
-          verbose: true
           libraries: |
-            - source-url: https://github.com/SolidGeek/VescUart.git
+            - source-url: ${{ env.VESC_LIB_URL }}
           cli-compile-flags: |
             - --library="${{ github.workspace }}"
           fqbn: "arduino:avr:pro"
@@ -28,3 +28,17 @@ jobs:
           sketches-report-path: ${{ env.SKETCHES_REPORTS_PATH }}
           sketch-paths: |
             - UartBrakes
+
+      - name: Compile for itsy bitsy 3v
+        uses: arduino/compile-sketches@v1
+        with:          
+          libraries: |
+            - source-url: ${{ env.VESC_LIB_URL }}
+          cli-compile-flags: |
+            - --library="${{ github.workspace }}"
+          fqbn: "adafruit:avr:itsybitsy32u4_3V https://adafruit.github.io/arduino-board-index/package_adafruit_index.json"
+          enable-deltas-report: false
+          sketches-report-path: ${{ env.SKETCHES_REPORTS_PATH }}
+          sketch-paths: |
+            - UartBrakes
+
