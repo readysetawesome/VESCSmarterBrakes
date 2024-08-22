@@ -25,7 +25,7 @@ class VESCSmarterBrakes
   public:
     VESCSmarterBrakes(int dimmerPin, int buttonPin);
     void TurnOn();
-    void DoLoop(int32_t RPM, float I, float V);
+    void DoLoop();
   private:
     void ReadMode();
     void ApplyMode();
