@@ -8,7 +8,7 @@ on:
 jobs:
   compile:
     name: "Compile Arduino Sketches"
-    uses: arduino/compile-sketches/.github/workflows/@v1.1.2
+    uses: arduino/compile-sketches/action.yml@v1.1.2
     with:
       fqbn: "arduino:avr:pro"
       sketch-paths: src
