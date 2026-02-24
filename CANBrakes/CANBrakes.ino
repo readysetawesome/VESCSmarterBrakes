@@ -1,8 +1,8 @@
+#include <SoftPWM_timer.h>
+#include <SoftPWM.h>
 #include <SPI.h>
 #include <mcp_can.h>
-#include <SoftPWM.h>
-#define USE_SOFTPWM
-#include "../VESCSmarterBrakes.h"
+#include "VESCSmarterBrakes.h"   // resolves to symlink → project root
 #include "vesc_can.h"
 
 // ── Pin assignments ─────────────────────────────────────────────────────────
@@ -47,10 +47,10 @@ void loop() {
     bool newData = false;
 
     if (CAN.checkReceive() == CAN_MSGAVAIL) {
+        unsigned long id;
         unsigned char len = 0;
         unsigned char buf[8];
-        CAN.readMsgBuf(&len, buf);
-        unsigned long id = CAN.getCanId();
+        CAN.readMsgBuf(&id, &len, buf);   // coryjfowler mcp_can: id comes from readMsgBuf
         newData = parseVescFrame(id, buf, vescData);
     }
 
