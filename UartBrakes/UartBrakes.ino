@@ -1,5 +1,5 @@
 #include <VescUart.h>
-#include "VESCSmarterBrakes.h"   // resolves to symlink → project root
+#include <VESCSmarterBrakes.h>
 
 // Dimmer pin, mode button pin
 VESCSmarterBrakes Brakes(3, 9);

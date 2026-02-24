@@ -2,12 +2,7 @@
 #define VESCSmarterBrakes_h
 
 #include "Arduino.h"
-
-// Define USE_SOFTPWM before including this header to use SoftPWM instead of
-// analogWrite — required for pins without hardware PWM support (e.g. pin 0/1).
-#ifdef USE_SOFTPWM
 #include <SoftPWM.h>
-#endif
 
 #define OFF                    255
 #define IDLE_POWER             230
@@ -28,10 +23,13 @@
 class VESCSmarterBrakes
 {
   public:
-    VESCSmarterBrakes(int dimmerPin, int buttonPin);
+    // useSoftPWM: pass true for pins without hardware PWM (e.g. pins 0/1 on the
+    // CAN board). Pass false (default) to use analogWrite for hardware PWM pins.
+    VESCSmarterBrakes(int dimmerPin, int buttonPin, bool useSoftPWM = false);
     void TurnOn();
-    // newData should be true only when fresh telemetry arrived this loop,
-    // so _loopsInTarget counts real VESC measurements rather than loop speed.
+    // newData: true only when fresh telemetry arrived this loop iteration.
+    // Braking logic is gated on this so the consecutive-measurement counter
+    // reflects actual VESC updates rather than loop speed.
     void DoLoop(int32_t rpm, float current, float voltage, bool newData);
   private:
     void ReadMode();
@@ -42,6 +40,7 @@ class VESCSmarterBrakes
     void TransitionBrightness(int dStart, int dStop);
     int _dimmerPin;
     int _buttonPin;
+    bool _useSoftPWM;
     int _startupSplashRate;
     unsigned long _startupSplashDelay;
     unsigned long _loopStartMillis;
@@ -54,7 +53,6 @@ class VESCSmarterBrakes
     unsigned long _idleSince;
     unsigned long _brakeReleasingFrom;
     unsigned long _lastDebounceTime;
-
     bool _lightOff;
     bool _idling;
     bool _brakeActive;

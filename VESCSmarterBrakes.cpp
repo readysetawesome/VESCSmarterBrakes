@@ -2,11 +2,12 @@
 #include <EEPROM.h>
 #include "VESCSmarterBrakes.h"
 
-VESCSmarterBrakes::VESCSmarterBrakes(int dimmerPin, int buttonPin) {
+VESCSmarterBrakes::VESCSmarterBrakes(int dimmerPin, int buttonPin, bool useSoftPWM) {
   pinMode(dimmerPin, OUTPUT);
   pinMode(buttonPin, INPUT_PULLUP);
   _dimmerPin = dimmerPin;
   _buttonPin = buttonPin;
+  _useSoftPWM = useSoftPWM;
 
   _mode = MODE_STEADY;
   _idling = false;
@@ -94,13 +95,13 @@ void VESCSmarterBrakes::ApplyMode() {
 void VESCSmarterBrakes::SetDimmerPower(int value) {
   if (_dimmerPower == NULL || _dimmerPower != value) {
     _dimmerPower = value;
-#ifdef USE_SOFTPWM
-    // SoftPWM: 0=off, 255=full on. Our constants are inverted (HIGH_POWER=0,
-    // OFF=255) for N-channel MOSFET control, so invert here.
-    SoftPWMSet(_dimmerPin, 255 - value);
-#else
-    analogWrite(_dimmerPin, value);
-#endif
+    if (_useSoftPWM) {
+      // SoftPWM: 0=off, 255=full on. Our constants use inverted logic
+      // (HIGH_POWER=0, OFF=255) for N-channel MOSFET, so invert here.
+      SoftPWMSet(_dimmerPin, 255 - value);
+    } else {
+      analogWrite(_dimmerPin, value);
+    }
   }
 }
 

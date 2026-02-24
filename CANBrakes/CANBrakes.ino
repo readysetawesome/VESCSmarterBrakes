@@ -2,7 +2,7 @@
 #include <SoftPWM.h>
 #include <SPI.h>
 #include <mcp_can.h>
-#include "VESCSmarterBrakes.h"   // resolves to symlink → project root
+#include <VESCSmarterBrakes.h>
 #include "vesc_can.h"
 
 // ── Pin assignments ─────────────────────────────────────────────────────────
@@ -17,7 +17,8 @@
 
 // ── Objects ─────────────────────────────────────────────────────────────────
 MCP_CAN CAN(CAN_CS_PIN);
-VESCSmarterBrakes Brakes(DIMMER_PIN, BUTTON_PIN);
+// true = use SoftPWM, required because pins 0/1 have no hardware PWM
+VESCSmarterBrakes Brakes(DIMMER_PIN, BUTTON_PIN, true);
 
 // Default inpVoltage to a safe value so low-voltage protection
 // doesn't fire before the first Status 5 frame arrives.
@@ -50,7 +51,7 @@ void loop() {
         unsigned long id;
         unsigned char len = 0;
         unsigned char buf[8];
-        CAN.readMsgBuf(&id, &len, buf);   // coryjfowler mcp_can: id comes from readMsgBuf
+        CAN.readMsgBuf(&id, &len, buf);
         newData = parseVescFrame(id, buf, vescData);
     }
 
