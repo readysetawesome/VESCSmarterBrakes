@@ -1,7 +1,8 @@
 #include <SPI.h>
 #include <mcp_can.h>
 #include <SoftPWM.h>
-#include "VESCSmarterBrakes.h"
+#define USE_SOFTPWM
+#include "../VESCSmarterBrakes.h"
 #include "vesc_can.h"
 
 // ── Pin assignments ─────────────────────────────────────────────────────────

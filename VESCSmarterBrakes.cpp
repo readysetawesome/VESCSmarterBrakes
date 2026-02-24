@@ -1,9 +1,6 @@
 #include "Arduino.h"
 #include <EEPROM.h>
-#include "VescUart.h"
 #include "VESCSmarterBrakes.h"
-
-VescUart UART;
 
 VESCSmarterBrakes::VESCSmarterBrakes(int dimmerPin, int buttonPin) {
   pinMode(dimmerPin, OUTPUT);
@@ -17,11 +14,6 @@ VESCSmarterBrakes::VESCSmarterBrakes(int dimmerPin, int buttonPin) {
   _startupSplashRate = 1;
   _startupSplashDelay = 2;
   _lastDebounceTime = 0;
-}
-
-void VESCSmarterBrakes::SetSerial(HardwareSerial* port) {
-  /** Define which ports to use as UART */
-  UART.setSerialPort(port);
 }
 
 void VESCSmarterBrakes::TurnOn() {
@@ -43,23 +35,22 @@ void VESCSmarterBrakes::TurnOn() {
 
 void VESCSmarterBrakes::TransitionBrightness(int dStart, int dStop) {
   int factor;
-  int loopStart = dStart/_startupSplashRate;
-  int loopEnd = dStop/_startupSplashRate;
+  int loopStart = dStart / _startupSplashRate;
+  int loopEnd   = dStop  / _startupSplashRate;
 
   if (dStart > dStop) {
     factor = -1;
   } else {
     factor = 1;
   }
-  
-  for (int i=loopStart; i != loopEnd; i+=factor ) {
-    SetDimmerPower(i*_startupSplashRate);
+
+  for (int i = loopStart; i != loopEnd; i += factor) {
+    SetDimmerPower(i * _startupSplashRate);
     delay(_startupSplashDelay);
   }
 
   SetDimmerPower(dStop);
 }
-
 
 void VESCSmarterBrakes::ReadMode() {
   int sensorValue = digitalRead(_buttonPin);
@@ -77,7 +68,6 @@ void VESCSmarterBrakes::ReadMode() {
   _lastButtonValue = sensorValue;
 }
 
-
 void VESCSmarterBrakes::CycleMode() {
   _mode++;
   if (_mode > LAST_MODE) {
@@ -91,13 +81,10 @@ void VESCSmarterBrakes::ApplyMode() {
   if (!_brakeActive) {
     if (_mode == MODE_LOW) {
       SetDimmerPower(LOW_POWER);
-
     } else if (_mode == MODE_STROBE) {
       SetDimmerPower(HIGH_POWER);
-
     } else if (_mode == MODE_STEADY) {
       SetDimmerPower(MEDIUM_POWER);
-
     } else if (_mode == MODE_OFF) {
       SetDimmerPower(OFF);
     }
@@ -107,7 +94,13 @@ void VESCSmarterBrakes::ApplyMode() {
 void VESCSmarterBrakes::SetDimmerPower(int value) {
   if (_dimmerPower == NULL || _dimmerPower != value) {
     _dimmerPower = value;
+#ifdef USE_SOFTPWM
+    // SoftPWM: 0=off, 255=full on. Our constants are inverted (HIGH_POWER=0,
+    // OFF=255) for N-channel MOSFET control, so invert here.
+    SoftPWMSet(_dimmerPin, 255 - value);
+#else
     analogWrite(_dimmerPin, value);
+#endif
   }
 }
 
@@ -122,66 +115,49 @@ void VESCSmarterBrakes::ApplyStrobe() {
   }
 }
 
-void VESCSmarterBrakes::DoLoop() {
-  unsigned long commReqDelayTime = 0;
-  float systemVoltage;
+void VESCSmarterBrakes::DoLoop(int32_t rpm, float current, float voltage, bool newData) {
+  _loopStartMillis = millis();
 
-  if (_loopStartMillis != NULL) {
-    commReqDelayTime = 15-(millis()-_loopStartMillis);
-  }
-
+  // Button and strobe run every iteration for responsiveness
   ReadMode();
   ApplyStrobe();
 
-  if (_mode != MODE_OFF && commReqDelayTime <= 0 && UART.getVescValues()) {
-    _loopStartMillis = millis();
-    systemVoltage = UART.data.inpVoltage;
+  // Braking logic only runs when fresh telemetry arrived this loop
+  if (_mode != MODE_OFF && newData) {
 
-    int32_t RPM;
-    float I;
-  
-    RPM = UART.data.rpm;
-    I = UART.data.avgMotorCurrent;
-
-    if (I < -12 && RPM > 100 ) {
-      // This looks like brakes. wait for 4 consecutive confirmations within the target ranges
+    if (current < -12 && rpm > 100) {
+      // Looks like braking — wait for 4 consecutive confirmations
       _loopsInTarget++;
       _idleSince = NULL;
-    
+
       if (!_brakeActive && _loopsInTarget > 3) {
         _brakeActive = true;
         SetDimmerPower(HIGH_POWER);
         _brakeReleasingFrom = NULL;
       }
     } else {
-      // Not in braking ranges, reset the counter
       _loopsInTarget = 0;
-    
-      if (I == 0 && abs(RPM) < 10) {
-        // Very low/zero rpm with zero current is idle state, mark time at the beginning of idle period
+
+      if (current == 0 && abs(rpm) < 10) {
         if (_idleSince == NULL) {
           _idleSince = _loopStartMillis;
         }
       } else {
-        // Not braking but not idling either. reset idle timer and start releasing if active
         _idleSince = NULL;
         if (_brakeActive) {
           _brakeActive = false;
           _brakeReleasingFrom = _loopStartMillis;
         }
       }
-    }  
+    }
 
     if (_brakeReleasingFrom != NULL && (_loopStartMillis - _brakeReleasingFrom > BRAKE_RELEASE_DEBOUNCE)) {
-      // the brake release debounce period has passed, reset it
       _brakeReleasingFrom = NULL;
-
-      // honor the debounce by first making sure subsequent event didn't reactivate brake
       if (!_brakeActive) {
-        // More than debounce ms have passed since ANY braking event, return to run power
         ApplyMode();
       }
     }
+
     if (_idleSince == NULL) {
       if (_idling) {
         _idling = false;
@@ -191,17 +167,15 @@ void VESCSmarterBrakes::DoLoop() {
       _idling = true;
       SetDimmerPower(IDLE_POWER);
     }
-    if (systemVoltage != NULL) {
-      if (systemVoltage < 22.5) {
-        if (!_lightOff) {
-          TransitionBrightness(LOW_POWER, OFF);
-          _lightOff= true;
-          delay(5000);
-        }
-      } else if (_lightOff) {
-        TurnOn();
+
+    if (voltage > 0 && voltage < 22.5) {
+      if (!_lightOff) {
+        TransitionBrightness(LOW_POWER, OFF);
+        _lightOff = true;
+        delay(5000);
       }
+    } else if (_lightOff) {
+      TurnOn();
     }
   }
-  delay(1);
 }
