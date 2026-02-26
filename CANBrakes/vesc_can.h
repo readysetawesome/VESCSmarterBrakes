@@ -21,8 +21,9 @@ struct VescCanData {
 // Returns true only when Status 1 (braking-relevant) data was updated.
 // Status 5 (voltage) is parsed silently as a side effect.
 inline bool parseVescFrame(unsigned long id, unsigned char *buf, VescCanData &out) {
-    unsigned char pktType = id & 0xFF;
-    unsigned char ctrlId  = (id >> 8) & 0xFF;
+    // VESC CAN ID format: controller_id | (packet_type << 8)
+    unsigned char ctrlId  = id & 0xFF;
+    unsigned char pktType = (id >> 8) & 0xFF;
 
     if (ctrlId != VESC_CONTROLLER_ID) return false;
 

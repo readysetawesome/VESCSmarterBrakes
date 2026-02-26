@@ -31,15 +31,11 @@ void setup() {
     SoftPWMBegin();
 
     // Init CAN at 500 kbps — standard VESC CAN rate.
-    // Blink LED rapidly if init fails (check wiring / CS pin).
     while (CAN.begin(MCP_ANY, CAN_500KBPS, MCP_16MHZ) != CAN_OK) {
-        digitalWrite(LED_PIN, !digitalRead(LED_PIN));
         delay(200);
     }
     CAN.setMode(MCP_NORMAL);
-
-    // Solid LED = CAN init OK
-    digitalWrite(LED_PIN, HIGH);
+    digitalWrite(LED_PIN, HIGH);  // LED on = CAN init OK
 
     Brakes.TurnOn();
 }
