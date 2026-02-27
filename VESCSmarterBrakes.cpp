@@ -1,6 +1,7 @@
 #include "Arduino.h"
 #include <EEPROM.h>
 #include "VESCSmarterBrakes.h"
+#include <SoftPWM.h>
 
 VESCSmarterBrakes::VESCSmarterBrakes(int dimmerPin, int buttonPin, bool useSoftPWM) {
   pinMode(dimmerPin, OUTPUT);

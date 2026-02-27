@@ -12,6 +12,7 @@ jobs:
     env:
       SKETCHES_REPORTS_PATH: sketches-reports
       VESC_LIB_URL: https://github.com/SolidGeek/VescUart.git
+      MCP_CAN_LIB_URL: https://github.com/coryjfowler/MCP_CAN_lib.git
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -31,7 +32,7 @@ jobs:
 
       - name: Compile for itsy bitsy 3v
         uses: arduino/compile-sketches@v1
-        with:          
+        with:
           libraries: |
             - source-url: ${{ env.VESC_LIB_URL }}
           cli-compile-flags: |
@@ -42,3 +43,16 @@ jobs:
           sketch-paths: |
             - UartBrakes
 
+      - name: Compile for Longan Labs CAN module (ATmega168PA)
+        uses: arduino/compile-sketches@v1
+        with:
+          libraries: |
+            - source-url: ${{ env.MCP_CAN_LIB_URL }}
+            - source-path: lib/SoftPWM
+          cli-compile-flags: |
+            - --library="${{ github.workspace }}"
+          fqbn: "arduino:avr:pro:cpu=16MHzatmega168"
+          enable-deltas-report: false
+          sketches-report-path: ${{ env.SKETCHES_REPORTS_PATH }}
+          sketch-paths: |
+            - CANBrakes

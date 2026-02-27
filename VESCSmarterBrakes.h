@@ -2,7 +2,6 @@
 #define VESCSmarterBrakes_h
 
 #include "Arduino.h"
-#include <SoftPWM.h>
 
 #define OFF                    255
 #define IDLE_POWER             230
