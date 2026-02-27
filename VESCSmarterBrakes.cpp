@@ -13,17 +13,32 @@ VESCSmarterBrakes::VESCSmarterBrakes(int dimmerPin, int buttonPin, bool useSoftP
   _idling = false;
   _brakeActive = false;
   _startupSplashRate = 1;
-  _startupSplashDelay = 2;
+  _startupSplashDelay = 10;
   _lastDebounceTime = 0;
 }
 
 void VESCSmarterBrakes::TurnOn() {
-  // pulse animation on startup
-  TransitionBrightness(HIGH_POWER, OFF);
-  TransitionBrightness(OFF, MEDIUM_POWER);
-  TransitionBrightness(MEDIUM_POWER, OFF);
-  TransitionBrightness(OFF, MEDIUM_POWER);
-  TransitionBrightness(MEDIUM_POWER, IDLE_POWER);
+  if (_useSoftPWM) {
+    // Register pin with SoftPWM and configure fade times for all transitions.
+    // Subsequent SoftPWMSet calls (via SetDimmerPower) fade automatically.
+    // Brake/strobe activation bypasses the fade via hardset (immediate=true).
+    SetDimmerPower(HIGH_POWER, true);
+    SoftPWMSetPolarity(_dimmerPin, SOFTPWM_INVERTED);  // checkval=0 → pin HIGH → perfect off
+    SoftPWMSetFadeTime(_dimmerPin, 300, 300);
+    delay(150);
+    SetDimmerPower(OFF);          delay(350);
+    SetDimmerPower(MEDIUM_POWER); delay(350);
+    SetDimmerPower(OFF);          delay(350);
+    SetDimmerPower(MEDIUM_POWER); delay(350);
+    SetDimmerPower(IDLE_POWER);   delay(350);
+    SoftPWMSetFadeTime(_dimmerPin, 0, 0);  // restore instant response after animation
+  } else {
+    TransitionBrightness(HIGH_POWER, OFF);
+    TransitionBrightness(OFF, MEDIUM_POWER);
+    TransitionBrightness(MEDIUM_POWER, OFF);
+    TransitionBrightness(OFF, MEDIUM_POWER);
+    TransitionBrightness(MEDIUM_POWER, IDLE_POWER);
+  }
 
   // apply saved mode from EEPROM
   int savedMode = EEPROM.read(MODE_EEPROM_ADDRESS);
@@ -40,9 +55,9 @@ void VESCSmarterBrakes::TransitionBrightness(int dStart, int dStop) {
   int loopEnd   = dStop  / _startupSplashRate;
 
   if (dStart > dStop) {
-    factor = -1;
+    factor = -5;
   } else {
-    factor = 1;
+    factor = 5;
   }
 
   for (int i = loopStart; i != loopEnd; i += factor) {
@@ -92,13 +107,15 @@ void VESCSmarterBrakes::ApplyMode() {
   }
 }
 
-void VESCSmarterBrakes::SetDimmerPower(int value) {
+void VESCSmarterBrakes::SetDimmerPower(int value, bool immediate) {
   if (_dimmerPower == NULL || _dimmerPower != value) {
     _dimmerPower = value;
     if (_useSoftPWM) {
-      // SoftPWM: 0=off, 255=full on. Our constants use inverted logic
-      // (HIGH_POWER=0, OFF=255) for N-channel MOSFET, so invert here.
-      SoftPWMSet(_dimmerPin, 255 - value);
+      // SOFTPWM_INVERTED polarity + 255-value inversion:
+      //   OFF=255   → checkval=0   → pin always HIGH → perfect off (no glow)
+      //   HIGH_POWER=0 → checkval=255 → pin ~100% LOW → full brightness
+      // immediate=true bypasses SoftPWMSetFadeTime for instant response (brakes, strobe).
+      SoftPWMSet(_dimmerPin, 255 - value, immediate ? 1 : 0);
     } else {
       analogWrite(_dimmerPin, value);
     }
@@ -109,9 +126,9 @@ void VESCSmarterBrakes::ApplyStrobe() {
   if (_mode == MODE_STROBE && !_brakeActive && !_idling) {
     if (_strobeLastCycledOn == NULL || millis() - _strobeLastCycledOn > 400) {
       _strobeLastCycledOn = millis();
-      SetDimmerPower(HIGH_POWER);
+      SetDimmerPower(HIGH_POWER, true);   // immediate — strobe must snap, not fade
     } else if (millis() - _strobeLastCycledOn > 200) {
-      SetDimmerPower(IDLE_POWER);
+      SetDimmerPower(IDLE_POWER, true);   // immediate
     }
   }
 }
@@ -133,7 +150,7 @@ void VESCSmarterBrakes::DoLoop(int32_t rpm, float current, float voltage, bool n
 
       if (!_brakeActive && _loopsInTarget > 3) {
         _brakeActive = true;
-        SetDimmerPower(HIGH_POWER);
+        SetDimmerPower(HIGH_POWER, true);  // immediate — brake response must be instant
         _brakeReleasingFrom = NULL;
       }
     } else {
@@ -171,7 +188,11 @@ void VESCSmarterBrakes::DoLoop(int32_t rpm, float current, float voltage, bool n
 
     if (voltage > 0 && voltage < 22.5) {
       if (!_lightOff) {
-        TransitionBrightness(LOW_POWER, OFF);
+        if (_useSoftPWM) {
+          SetDimmerPower(OFF);  // fades via SoftPWMSetFadeTime
+        } else {
+          TransitionBrightness(LOW_POWER, OFF);
+        }
         _lightOff = true;
         delay(5000);
       }

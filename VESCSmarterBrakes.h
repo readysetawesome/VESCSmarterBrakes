@@ -35,7 +35,7 @@ class VESCSmarterBrakes
     void ReadMode();
     void ApplyMode();
     void ApplyStrobe();
-    void SetDimmerPower(int value);
+    void SetDimmerPower(int value, bool immediate = false);
     void CycleMode();
     void TransitionBrightness(int dStart, int dStop);
     int _dimmerPin;
