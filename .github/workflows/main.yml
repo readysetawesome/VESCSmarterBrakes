@@ -51,6 +51,8 @@ jobs:
             - source-path: lib/SoftPWM
           cli-compile-flags: |
             - --library="${{ github.workspace }}"
+            - --build-property=compiler.cpp.extra_flags=-DUSE_SOFTPWM
+            - --build-property=compiler.c.extra_flags=-DUSE_SOFTPWM
           fqbn: "arduino:avr:pro:cpu=16MHzatmega168"
           enable-deltas-report: false
           sketches-report-path: ${{ env.SKETCHES_REPORTS_PATH }}

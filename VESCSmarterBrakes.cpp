@@ -1,7 +1,9 @@
 #include "Arduino.h"
 #include <EEPROM.h>
 #include "VESCSmarterBrakes.h"
+#ifdef USE_SOFTPWM
 #include <SoftPWM.h>
+#endif
 
 VESCSmarterBrakes::VESCSmarterBrakes(int dimmerPin, int buttonPin, bool useSoftPWM) {
   pinMode(dimmerPin, OUTPUT);
@@ -24,15 +26,19 @@ void VESCSmarterBrakes::TurnOn() {
     // Subsequent SoftPWMSet calls (via SetDimmerPower) fade automatically.
     // Brake/strobe activation bypasses the fade via hardset (immediate=true).
     SetDimmerPower(HIGH_POWER, true);
+#ifdef USE_SOFTPWM
     SoftPWMSetPolarity(_dimmerPin, SOFTPWM_INVERTED);  // checkval=0 → pin HIGH → perfect off
     SoftPWMSetFadeTime(_dimmerPin, 300, 300);
+#endif
     delay(150);
     SetDimmerPower(OFF);          delay(350);
     SetDimmerPower(MEDIUM_POWER); delay(350);
     SetDimmerPower(OFF);          delay(350);
     SetDimmerPower(MEDIUM_POWER); delay(350);
     SetDimmerPower(IDLE_POWER);   delay(350);
+#ifdef USE_SOFTPWM
     SoftPWMSetFadeTime(_dimmerPin, 0, 0);  // restore instant response after animation
+#endif
   } else {
     TransitionBrightness(HIGH_POWER, OFF);
     TransitionBrightness(OFF, MEDIUM_POWER);
@@ -116,7 +122,9 @@ void VESCSmarterBrakes::SetDimmerPower(int value, bool immediate) {
       //   OFF=255   → checkval=0   → pin always HIGH → perfect off (no glow)
       //   HIGH_POWER=0 → checkval=255 → pin ~100% LOW → full brightness
       // immediate=true bypasses SoftPWMSetFadeTime for instant response (brakes, strobe).
+#ifdef USE_SOFTPWM
       SoftPWMSet(_dimmerPin, 255 - value, immediate ? 1 : 0);
+#endif
     } else {
       analogWrite(_dimmerPin, value);
     }
