@@ -1,30 +1,32 @@
+#include <VescUart.h>
 #include <VESCSmarterBrakes.h>
 
-// Pass in dimmer pin, mode switch pin
+// Dimmer pin, mode button pin
 VESCSmarterBrakes Brakes(3, 9);
-
+VescUart UART;
 
 void setup() {
   #if defined(__AVR_ATmega32U4__) || defined(__AVR_ATmega16U4__)
-
   Serial1.begin(115200);
-  while (!Serial1) {;}
-  Brakes.SetSerial(&Serial1);
-
-  #endif
-
-  #if defined(__AVR_ATmega328P__)
-
+  UART.setSerialPort(&Serial1);
+  #elif defined(__AVR_ATmega328P__)
   Serial.begin(115200);
-  while (!Serial) {;}
-  Brakes.SetSerial(&Serial);
-
+  UART.setSerialPort(&Serial);
   #endif
 
   Brakes.TurnOn();
 }
 
 void loop() {
-  Brakes.DoLoop();
-  delay(10);
+  static unsigned long lastQuery = 0;
+  bool newData = false;
+
+  if (millis() - lastQuery >= 15) {
+    lastQuery = millis();
+    if (UART.getVescValues()) {
+      newData = true;
+    }
+  }
+
+  Brakes.DoLoop(UART.data.rpm, UART.data.avgMotorCurrent, UART.data.inpVoltage, newData);
 }
